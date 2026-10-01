@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tạo QR Hàng Loạt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: two-column workbench — numbered steps on the left, a sticky proof sheet (preview + checks) on the right; stacks on phones. */
+:root{
+  --bg:#f3f5f6; --surface:#ffffff; --ink:#14191c; --muted:#5b6670; --line:#d7dde1;
+  --accent:#0d6b70; --accent-ink:#ffffff; --accent-soft:#e1f0f0;
+  --ok:#1d7a3e; --warn:#a15c00; --bad:#b3261e; --ok-soft:#e5f3ea; --warn-soft:#fbefdc; --bad-soft:#fbe6e4;
+  --font-ui:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1416; --surface:#172024; --ink:#e7eef0; --muted:#97a6ad; --line:#2a373c;
+  --accent:#4cc0c4; --accent-ink:#06282a; --accent-soft:#16363a;
+  --ok:#5fcf86; --warn:#e9a64a; --bad:#ff8a80; --ok-soft:#173326; --warn-soft:#3a2c14; --bad-soft:#3d1d1b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1416; --surface:#172024; --ink:#e7eef0; --muted:#97a6ad; --line:#2a373c;
+  --accent:#4cc0c4; --accent-ink:#06282a; --accent-soft:#16363a;
+  --ok:#5fcf86; --warn:#e9a64a; --bad:#ff8a80; --ok-soft:#173326; --warn-soft:#3a2c14; --bad-soft:#3d1d1b; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--font-ui);padding-inline:16px;padding-block:24px 48px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+header h1{font-size:1.75rem;font-weight:700;letter-spacing:-.01em;margin:0;text-wrap:balance}
+header p{margin:.25rem 0 0;color:var(--muted);max-width:68ch}
+.spec{font-family:var(--font-mono);font-size:.8rem;color:var(--muted)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:20px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.steps{display:flex;flex-direction:column;gap:16px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.card h2{margin:0;font-size:1rem;font-weight:600;display:flex;gap:10px;align-items:center}
+.num{font-family:var(--font-mono);font-size:.75rem;width:24px;height:24px;border-radius:50%;display:inline-grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-weight:600;flex:none}
+.drop{border:1.5px dashed var(--line);border-radius:var(--r);padding:22px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop strong{display:block;font-weight:600}
+.drop small{color:var(--muted)}
+.fileinfo{font-size:.85rem;color:var(--muted)}
+.fileinfo b{color:var(--ink);font-weight:600}
+.tag{display:inline-block;font-size:.72rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:99px;background:var(--warn-soft);color:var(--warn)}
+.row{display:flex;flex-wrap:wrap;gap:12px}
+.field{display:flex;flex-direction:column;gap:5px;flex:1 1 160px;min-width:0}
+.field label{font-size:.78rem;font-weight:600;letter-spacing:.03em;text-transform:uppercase;color:var(--muted)}
+.field .hint{font-size:.78rem;color:var(--muted)}
+input[type=text],input[type=number],select{font:inherit;font-size:.9rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
+input[type=color]{width:100%;height:38px;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:3px}
+input:focus-visible,select:focus-visible,button:focus-visible,.drop:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:.9rem}
+.check input{margin-top:4px}
+.radio{display:flex;flex-direction:column;gap:8px}
+.mono{font-family:var(--font-mono);font-size:.82rem}
+.tablebox{overflow:auto;max-height:280px;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:.82rem}
+th,td{padding:6px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{position:sticky;top:0;background:var(--surface);font-weight:600;color:var(--muted);font-size:.74rem;letter-spacing:.03em;text-transform:uppercase}
+td{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+td.data{max-width:340px;overflow:hidden;text-overflow:ellipsis}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:var(--accent-soft)}
+tbody tr.sel td{background:var(--accent-soft);color:var(--accent)}
+.side{position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px);display:flex;flex-direction:column;gap:16px;min-width:0}
+@media (max-width:900px){.side{position:static}}
+.proof{display:grid;place-items:center;padding:22px;position:relative;background:var(--bg);border-radius:8px}
+.proof canvas,.proof img{width:100%;max-width:240px;height:auto;display:block;box-shadow:0 0 0 1px var(--line)}
+.crop{position:absolute;width:16px;height:16px;border-color:var(--muted);border-style:solid;border-width:0}
+.crop.tl{top:8px;left:8px;border-top-width:1px;border-left-width:1px}
+.crop.tr{top:8px;right:8px;border-top-width:1px;border-right-width:1px}
+.crop.bl{bottom:8px;left:8px;border-bottom-width:1px;border-left-width:1px}
+.crop.br{bottom:8px;right:8px;border-bottom-width:1px;border-right-width:1px}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;font-size:.85rem}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;font-family:var(--font-mono);font-size:.8rem;overflow-wrap:anywhere}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:.78rem;padding:3px 9px;border-radius:99px;font-weight:500;font-variant-numeric:tabular-nums}
+.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip.bad{background:var(--bad-soft);color:var(--bad)}
+.chip.n{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.issues{font-size:.82rem;color:var(--muted);margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
+button{font:inherit;font-weight:600;border-radius:8px;padding:11px 16px;border:1px solid transparent;cursor:pointer}
+.primary{background:var(--accent);color:var(--accent-ink)}
+.primary:disabled{opacity:.45;cursor:not-allowed}
+.ghost{background:transparent;border-color:var(--line);color:var(--ink)}
+.progress{height:8px;background:var(--bg);border-radius:99px;overflow:hidden;border:1px solid var(--line)}
+.progress i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.status{font-size:.85rem;color:var(--muted);min-height:1.3em}
+.status.err{color:var(--bad)}
+.status.good{color:var(--ok)}
+.tree{font-family:var(--font-mono);font-size:.78rem;color:var(--muted);background:var(--bg);border-radius:8px;padding:10px 12px;margin:0;white-space:pre;overflow-x:auto}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<style>body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Tạo QR Hàng Loạt</h1>
+    <p>Nạp danh sách Excel hoặc CSV, chọn cột tên file và cột nội dung, bấm một nút để tải về file ZIP chứa toàn bộ ảnh QR, mỗi ảnh đặt tên theo cột bạn chọn. Mọi xử lý chạy ngay trong trình duyệt, dữ liệu không gửi đi đâu.</p>
+  </header>
+
+  <div class="grid">
+    <div class="steps">
+
+      <section class="card" aria-labelledby="h1">
+        <h2 id="h1"><span class="num">1</span>Nạp danh sách</h2>
+        <div class="drop" id="drop" tabindex="0" role="button" aria-label="Chọn file Excel hoặc CSV">
+          <strong>Kéo thả file vào đây hoặc bấm để chọn</strong>
+          <small>.xlsx · .xls · .csv — dòng đầu là tiêu đề cột</small>
+        </div>
+        <input type="file" id="file" accept=".xlsx,.xls,.csv,.txt" hidden>
+        <div class="fileinfo" id="fileinfo"></div>
+        <div class="row" id="sheetRow" hidden>
+          <div class="field"><label for="sheet">Sheet</label><select id="sheet"></select></div>
+        </div>
+        <label class="check"><input type="checkbox" id="hasHeader" checked> Dòng đầu tiên là tiêu đề cột</label>
+      </section>
+
+      <section class="card" aria-labelledby="h2">
+        <h2 id="h2"><span class="num">2</span>Chọn cột</h2>
+        <div class="row">
+          <div class="field"><label for="colName">Cột tên file</label><select id="colName"></select><span class="hint">Ví dụ cột Serial → EUC-023155.png</span></div>
+          <div class="field"><label for="colData">Cột nội dung QR</label><select id="colData"></select><span class="hint">Link hoặc văn bản cần mã hoá</span></div>
+        </div>
+        <div class="tablebox"><table><thead><tr><th>#</th><th>Tên file</th><th>Nội dung QR</th></tr></thead><tbody id="tbody"></tbody></table></div>
+        <div class="fileinfo" id="tablenote"></div>
+      </section>
+
+      <section class="card" aria-labelledby="h3">
+        <h2 id="h3"><span class="num">3</span>Thông số QR</h2>
+        <div class="row">
+          <div class="field"><label for="qrSize">Vùng QR (px)</label><input type="number" id="qrSize" value="850" min="100" max="4000" step="1"></div>
+          <div class="field"><label for="pad">Viền trắng mỗi cạnh (px)</label><input type="number" id="pad" value="75" min="0" max="1000" step="1"></div>
+          <div class="field"><label for="ec">Mức sửa lỗi</label>
+            <select id="ec"><option value="L">L · 7%</option><option value="M" selected>M · 15%</option><option value="Q">Q · 25%</option><option value="H">H · 30% (có logo giữa)</option></select></div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="fg">Màu QR</label><input type="color" id="fg" value="#000000"></div>
+          <div class="field"><label for="bgc">Màu nền</label><input type="color" id="bgc" value="#ffffff"></div>
+          <div class="field"><label for="dpi">PPI ghi vào PNG</label><input type="number" id="dpi" value="300" min="72" max="2400" step="1"><span class="hint" id="dpiHint"></span></div>
+        </div>
+        <div class="spec" id="specLine"></div>
+      </section>
+
+      <section class="card" aria-labelledby="h4">
+        <h2 id="h4"><span class="num">4</span>Tạo và tải về</h2>
+        <div class="row">
+          <div class="field"><label for="zipName">Tên folder / file ZIP</label><input type="text" id="zipName" spellcheck="false"></div>
+        </div>
+        <label class="check"><input type="checkbox" id="verify" checked> Quét lại từng mã sau khi tạo để kiểm tra (chậm hơn, nên bật)</label>
+        <pre class="tree" id="tree"></pre>
+        <div class="row">
+          <button class="primary" id="go">Tạo và tải ZIP</button>
+          <button class="ghost" id="cancel" hidden>Dừng</button>
+        </div>
+        <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+        <div class="status" id="status" role="status"></div>
+      </section>
+    </div>
+
+    <aside class="side">
+      <section class="card" aria-labelledby="hp">
+        <h2 id="hp">Bản xem trước</h2>
+        <div class="proof"><span class="crop tl"></span><span class="crop tr"></span><span class="crop bl"></span><span class="crop br"></span><canvas id="preview" width="1000" height="1000" aria-label="Mã QR xem trước"></canvas></div>
+        <dl class="kv" id="pinfo"></dl>
+      </section>
+      <section class="card" aria-labelledby="hc">
+        <h2 id="hc">Kiểm tra dữ liệu</h2>
+        <div class="chips" id="chips"></div>
+        <ul class="issues" id="issues"></ul>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  if (window.qrcode && qrcode.stringToBytesFuncs && qrcode.stringToBytesFuncs['UTF-8']) qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+
+  // ---------- state ----------
+  const S = { fileName: '', isSample: true, sheets: {}, sheetNames: [], grid: [], cols: [], rows: [], sel: 0, running: false, cancel: false };
+
+  const SAMPLE = [['STT','Serial','Link QR']].concat(Array.from({length: 12}, (_, i) => {
+    const n = String(1001 + i).padStart(6, '0');
+    const tok = Math.random().toString(36).slice(2, 13) + Math.random().toString(36).slice(2, 13);
+    return [String(i + 1), 'MAU-' + n, 'https://example.com/t/' + tok.slice(0, 22)];
+  }));
+
+  // ---------- helpers ----------
+  const safeName = s => (String(s).trim().replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '_').replace(/\.+$/, '') || 'qr');
+  const fmt = n => n.toLocaleString('vi-VN');
+  const intVal = (id, d) => { const v = parseInt($(id).value, 10); return Number.isFinite(v) && v >= 0 ? v : d; };
+
+  function makeMatrix(text, ec) {
+    const q = qrcode(0, ec);
+    q.addData(text, 'Byte');
+    q.make();
+    return q;
+  }
+  function drawQR(canvas, q, size, pad, fg, bg) {
+    const n = q.getModuleCount(), W = size + pad * 2;
+    canvas.width = W; canvas.height = W;
+    const c = canvas.getContext('2d');
+    c.fillStyle = bg; c.fillRect(0, 0, W, W);
+    c.fillStyle = fg;
+    const e = []; for (let i = 0; i <= n; i++) e.push(pad + Math.round(i * size / n)); // module edges snapped to whole pixels
+    for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (q.isDark(r, k)) c.fillRect(e[k], e[r], e[k + 1] - e[k], e[r + 1] - e[r]);
+    return n;
+  }
+
+  // PNG pHYs chunk so InDesign places the image at the chosen PPI
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  const crc32 = b => { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  function withPPI(buf, ppi) {
+    const src = new Uint8Array(buf), ppm = Math.round(ppi / 0.0254);
+    const chunk = new Uint8Array(21), dv = new DataView(chunk.buffer);
+    dv.setUint32(0, 9); chunk.set([112, 72, 89, 115], 4); dv.setUint32(8, ppm); dv.setUint32(12, ppm); chunk[16] = 1;
+    dv.setUint32(17, crc32(chunk.subarray(4, 17)));
+    const at = 8 + 25; // signature + IHDR
+    const out = new Uint8Array(src.length + 21);
+    out.set(src.subarray(0, at)); out.set(chunk, at); out.set(src.subarray(at), at + 21);
+    return out;
+  }
+  const toBlob = cv => new Promise(res => cv.toBlob(res, 'image/png'));
+  function utf16(text) {
+    const s = '\ufeff' + text, b = new Uint8Array(s.length * 2);
+    for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); b[i * 2] = c & 255; b[i * 2 + 1] = c >> 8; }
+    return b;
+  }
+  const csvCell = v => /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+
+  // ---------- load ----------
+  function loadWorkbook(wb, name, sample) {
+    S.fileName = name; S.isSample = sample;
+    S.sheets = {}; S.sheetNames = wb.SheetNames.slice();
+    S.sheetNames.forEach(n => { S.sheets[n] = XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: false, defval: '', blankrows: false }); });
+    const sel = $('sheet'); sel.innerHTML = '';
+    S.sheetNames.forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n + ' (' + fmt(S.sheets[n].length) + ' dòng)'; sel.appendChild(o); });
+    $('sheetRow').hidden = S.sheetNames.length < 2;
+    useSheet(S.sheetNames[0], true);
+  }
+  function useSheet(name, autodetect) {
+    S.grid = (S.sheets[name] || []).map(r => r.map(v => String(v ?? '').trim()));
+    const width = S.grid.reduce((m, r) => Math.max(m, r.length), 0);
+    const head = $('hasHeader').checked ? (S.grid[0] || []) : [];
+    S.cols = Array.from({ length: width }, (_, i) => (head[i] || '').trim() || ('Cột ' + XLSX.utils.encode_col(i)));
+    ['colName', 'colData'].forEach(id => {
+      const s = $(id), prev = s.value; s.innerHTML = '';
+      S.cols.forEach((c, i) => { const o = document.createElement('option'); o.value = i; o.textContent = XLSX.utils.encode_col(i) + ' · ' + c; s.appendChild(o); });
+      if (!autodetect && prev !== '' && +prev < width) s.value = prev;
+    });
+    if (autodetect) detectCols();
+    $('fileinfo').innerHTML = (S.isSample ? '<span class="tag">Dữ liệu mẫu</span> ' : '') + '<b>' + escapeHtml(S.fileName) + '</b>' + (S.sheetNames.length > 1 ? ' · sheet ' + escapeHtml(name) : '');
+    rebuild();
+  }
+  function bodyRows() { return $('hasHeader').checked ? S.grid.slice(1) : S.grid; }
+  function detectCols() {
+    const rows = bodyRows().slice(0, 200), w = S.cols.length;
+    let dataCol = 0, best = -1;
+    for (let i = 0; i < w; i++) {
+      const vals = rows.map(r => r[i] || '').filter(Boolean);
+      if (!vals.length) continue;
+      const urlShare = vals.filter(v => /^(https?:|www\.)/i.test(v)).length / vals.length;
+      const avg = vals.reduce((a, v) => a + v.length, 0) / vals.length;
+      const score = urlShare * 1000 + avg;
+      if (score > best) { best = score; dataCol = i; }
+    }
+    let nameCol = -1, nb = -Infinity;
+    for (let i = 0; i < w; i++) {
+      if (i === dataCol) continue;
+      const vals = rows.map(r => r[i] || '');
+      const filled = vals.filter(Boolean);
+      if (!filled.length) continue;
+      const uniq = new Set(filled).size / filled.length;
+      const numericSeq = filled.every(v => /^\d+$/.test(v));
+      let score = uniq * 10 + (filled.length / vals.length) * 5 - (numericSeq ? 6 : 0);
+      if (/serial|mã|ma_|code|tên|ten|name|sku|id/i.test(S.cols[i])) score += 8;
+      if (score > nb) { nb = score; nameCol = i; }
+    }
+    if (nameCol < 0) nameCol = dataCol;
+    $('colName').value = nameCol; $('colData').value = dataCol;
+  }
+  const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // ---------- build rows + checks ----------
+  function rebuild() {
+    const nc = +$('colName').value, dc = +$('colData').value;
+    const raw = bodyRows();
+    const seen = new Map(), seenData = new Map();
+    S.rows = []; S.skipped = 0;
+    const issues = { emptyData: [], dupName: [], dupData: [], renamed: [], tooLong: [] };
+    raw.forEach((r, idx) => {
+      const line = idx + 1 + ($('hasHeader').checked ? 1 : 0);
+      const data = (r[dc] || '').trim(), nameRaw = (r[nc] || '').trim();
+      if (!data && !nameRaw) { S.skipped++; return; }
+      if (!data) { issues.emptyData.push(line); return; }
+      let base = safeName(nameRaw || ('QR_' + String(S.rows.length + 1).padStart(4, '0')));
+      if (nameRaw && base !== nameRaw) issues.renamed.push(line);
+      const key = base.toLowerCase();
+      let name = base;
+      if (seen.has(key)) { const k = seen.get(key) + 1; seen.set(key, k); name = base + '_' + k; issues.dupName.push(line); } else seen.set(key, 1);
+      if (seenData.has(data)) issues.dupData.push(line + ' (= dòng ' + seenData.get(data) + ')'); else seenData.set(data, line);
+      S.rows.push({ line, name, data });
+    });
+    S.issues = issues;
+    if (!S.zipTouched) $('zipName').value = defaultZip();
+    renderTable(); renderChecks(); S.sel = Math.min(S.sel, Math.max(0, S.rows.length - 1)); renderPreview(); renderTree();
+  }
+  function defaultZip() {
+    if (!S.rows.length) return 'QR';
+    const a = S.rows[0].name, b = S.rows[S.rows.length - 1].name;
+    const m = a.match(/^(.*?)(\d+)$/), m2 = b.match(/^(.*?)(\d+)$/);
+    if (m && m2 && m[1] === m2[1] && S.rows.length > 1) return safeName('QR_' + m[1].replace(/-$/, '') + '_' + m[2] + '-' + m2[2]);
+    return safeName('QR_' + a + (S.rows.length > 1 ? '-' + b : ''));
+  }
+  function renderTable() {
+    const tb = $('tbody'), max = 200, frag = document.createDocumentFragment();
+    S.rows.slice(0, max).forEach((r, i) => {
+      const tr = document.createElement('tr'); if (i === S.sel) tr.className = 'sel';
+      tr.innerHTML = '<td>' + r.line + '</td><td>' + escapeHtml(r.name) + '.png</td><td class="data" title="' + escapeHtml(r.data) + '">' + escapeHtml(r.data) + '</td>';
+      tr.addEventListener('click', () => { S.sel = i; tb.querySelectorAll('tr').forEach((x, j) => x.classList.toggle('sel', j === i)); renderPreview(); });
+      frag.appendChild(tr);
+    });
+    tb.innerHTML = ''; tb.appendChild(frag);
+    $('tablenote').textContent = S.rows.length > max ? 'Hiển thị ' + max + ' / ' + fmt(S.rows.length) + ' dòng đầu. Bấm một dòng để xem trước mã.' : 'Bấm một dòng để xem trước mã.';
+  }
+  function renderChecks() {
+    const I = S.issues, chips = [];
+    chips.push(['n', fmt(S.rows.length) + ' mã sẽ tạo']);
+    const add = (arr, label, cls) => { if (arr.length) chips.push([cls, fmt(arr.length) + ' ' + label]); };
+    add(I.dupName, 'tên trùng', 'bad'); add(I.dupData, 'nội dung trùng', 'warn'); add(I.emptyData, 'ô nội dung trống', 'warn'); add(I.renamed, 'tên đổi ký tự', 'warn');
+    if (chips.length === 1 && S.rows.length) chips.push(['ok', 'Không trùng, không trống']);
+    $('chips').innerHTML = chips.map(([c, t]) => '<span class="chip ' + c + '">' + t + '</span>').join('');
+    const li = [];
+    const show = (arr, txt) => { if (arr.length) li.push(txt + ': dòng ' + arr.slice(0, 8).join(', ') + (arr.length > 8 ? '…' : '')); };
+    show(I.dupName, 'Tên trùng, đã thêm hậu tố _2, _3');
+    show(I.dupData, 'Cùng nội dung QR');
+    show(I.emptyData, 'Bỏ qua vì không có nội dung');
+    show(I.renamed, 'Tên có ký tự cấm trong Windows, đã thay bằng _');
+    if (S.skipped) li.push(fmt(S.skipped) + ' dòng trống hoàn toàn đã bỏ qua.');
+    $('issues').innerHTML = li.map(t => '<li>' + escapeHtml(t) + '</li>').join('');
+  }
+  function renderPreview() {
+    const r = S.rows[S.sel], cv = $('preview'), info = $('pinfo');
+    const size = intVal('qrSize', 850), pad = intVal('pad', 75);
+    if (!r) { cv.width = cv.height = 10; info.innerHTML = '<dt>Trạng thái</dt><dd>Chưa có dòng dữ liệu</dd>'; return; }
+    try {
+      const q = makeMatrix(r.data, $('ec').value);
+      const n = drawQR(cv, q, size, pad, $('fg').value, $('bgc').value);
+      const mod = size / n, quiet = pad / mod, ppi = intVal('dpi', 300), mm = (size + 2 * pad) / ppi * 25.4;
+      info.innerHTML =
+        '<dt>File</dt><dd>' + escapeHtml(r.name) + '.png</dd>' +
+        '<dt>Nội dung</dt><dd>' + escapeHtml(r.data) + '</dd>' +
+        '<dt>Version</dt><dd>V' + ((n - 17) / 4) + ' · ' + n + '×' + n + ' module</dd>' +
+        '<dt>Module</dt><dd>' + mod.toFixed(2) + ' px</dd>' +
+        '<dt>Viền</dt><dd>' + pad + ' px ≈ ' + quiet.toFixed(1) + ' module' + (quiet < 4 ? ' (ISO khuyên ≥ 4)' : '') + '</dd>' +
+        '<dt>Ảnh</dt><dd>' + (size + 2 * pad) + '×' + (size + 2 * pad) + ' px · ' + mm.toFixed(1) + ' mm @' + ppi + ' PPI</dd>';
+    } catch (e) {
+      cv.width = cv.height = 10;
+      info.innerHTML = '<dt>Lỗi</dt><dd>Nội dung quá dài để mã hoá ở mức ' + $('ec').value + '. Rút gọn nội dung hoặc hạ mức sửa lỗi.</dd>';
+    }
+    const W = size + 2 * pad;
+    $('specLine').textContent = 'PNG ' + W + '×' + W + ' px = QR ' + size + ' px + viền ' + pad + ' px mỗi cạnh · mức ' + $('ec').value + ' · ' + $('fg').value.toUpperCase() + ' trên ' + $('bgc').value.toUpperCase();
+    $('dpiHint').textContent = 'Kích thước in ở 100% ≈ ' + (W / intVal('dpi', 300) * 25.4).toFixed(1) + ' mm';
+  }
+  function renderTree() {
+    const z = safeName($('zipName').value || 'QR'), r = S.rows;
+    const first = r[0] ? r[0].name + '.png' : '…', last = r.length > 1 ? r[r.length - 1].name + '.png' : '';
+    $('tree').textContent = z + '.zip\n└─ ' + z + '/\n   ├─ ' + first + (last ? '\n   ├─ … (' + fmt(r.length) + ' ảnh)\n   ├─ ' + last : '') + '\n   └─ _danh_sach.csv   ← danh sách + kết quả quét';
+  }
+  function joinPath(prefix, name) {
+    const p = prefix.trim(); if (!p) return name;
+    const sep = p.includes('/') && !p.includes('\\') ? '/' : '\\';
+    return (/[\\/]$/.test(p) ? p : p + sep) + name;
+  }
+
+  // ---------- generate ----------
+  async function generate() {
+    if (S.running || !S.rows.length) return;
+    const inArtifact = !!(window.claude && window.claude.use);
+    const downloads = inArtifact ? await window.claude.use('downloads') : null;
+    if (inArtifact && !downloads) { setStatus('Tài khoản đang xem không được phép tải file từ trang này. Hãy xin bản công cụ dạng file .html (mở thẳng bằng Chrome/Edge trên máy) để tải không giới hạn.', 'err'); return; }
+    S.running = true; S.cancel = false; $('go').disabled = true; $('cancel').hidden = false;
+    const size = intVal('qrSize', 850), pad = intVal('pad', 75), ec = $('ec').value, fg = $('fg').value, bg = $('bgc').value, ppi = intVal('dpi', 300), verify = $('verify').checked && typeof jsQR === 'function';
+    const folder = safeName($('zipName').value || 'QR'), zip = new JSZip(), dir = zip.folder(folder);
+    const cv = document.createElement('canvas'), small = document.createElement('canvas'); small.width = small.height = 500;
+    const sc = small.getContext('2d', { willReadFrequently: true });
+    const report = [], bad = [];
+    const t0 = performance.now();
+    for (let i = 0; i < S.rows.length; i++) {
+      if (S.cancel) break;
+      const r = S.rows[i]; let ok = 'OK', ver = '';
+      try {
+        const q = makeMatrix(r.data, ec); const n = drawQR(cv, q, size, pad, fg, bg); ver = 'V' + ((n - 17) / 4);
+        const blob = await toBlob(cv); const png = withPPI(await blob.arrayBuffer(), ppi);
+        dir.file(r.name + '.png', png);
+        if (verify) {
+          sc.imageSmoothingEnabled = true; sc.drawImage(cv, 0, 0, 500, 500);
+          const img = sc.getImageData(0, 0, 500, 500), res = jsQR(img.data, 500, 500, { inversionAttempts: 'attemptBoth' });
+          if (!res || res.data !== r.data) { ok = 'CHƯA ĐỌC ĐƯỢC'; bad.push(r.name); }
+        } else ok = 'không quét';
+      } catch (e) { ok = 'LỖI: nội dung quá dài'; bad.push(r.name); }
+      report.push([r.name + '.png', String(r.line), r.name, r.data, ver, ok]);
+      if (i % 10 === 0 || i === S.rows.length - 1) {
+        const p = (i + 1) / S.rows.length, el = (performance.now() - t0) / 1000, eta = el / p - el;
+        $('bar').style.width = (p * 85).toFixed(1) + '%';
+        setStatus('Đang tạo ' + fmt(i + 1) + ' / ' + fmt(S.rows.length) + (i > 20 ? ' · còn khoảng ' + Math.ceil(eta) + ' giây' : ''));
+        await new Promise(res => setTimeout(res, 0));
+      }
+    }
+    if (S.cancel) { done('Đã dừng. Chưa có file nào được tải.', 'err'); return; }
+    const okRows = report.filter(x => !x[5].startsWith('LỖI'));
+    const csv = '\ufeff' + [['file', 'dong', 'ten', 'noi_dung', 'version', 'kiem_tra']].concat(report).map(r => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
+    dir.file('_danh_sach.csv', csv);
+    setStatus('Đang đóng gói ZIP…');
+    const zblob = await zip.generateAsync({ type: 'blob', compression: 'STORE' }, m => { $('bar').style.width = (85 + m.percent * 0.15).toFixed(1) + '%'; });
+    const summary = fmt(okRows.length) + ' mã' + (verify ? (bad.length ? ' · ' + fmt(bad.length) + ' mã cần kiểm tra lại (xem cột kiem_tra trong _danh_sach.csv)' : ' · tất cả quét đọc đúng') : '');
+    try {
+      if (downloads) await downloads.save({ filename: folder + '.zip', data: zblob });
+      else { const u = URL.createObjectURL(zblob), a = document.createElement('a'); a.href = u; a.download = folder + '.zip'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 60000); }
+      done('Đã tải ' + folder + '.zip · ' + summary, bad.length ? 'err' : 'good');
+    } catch (e) {
+      const why = e && e.code === 'declined' ? 'Bạn đã huỷ lưu file. Bấm lại nút để tải.' : e && e.code === 'rate_limited' ? 'Đang có một hộp thoại lưu mở, thử lại sau giây lát.' : 'Không lưu được file (' + (e && e.code || 'lỗi') + ').';
+      done(why + ' ' + summary, 'err');
+    }
+  }
+  function done(msg, cls) { S.running = false; $('go').disabled = false; $('cancel').hidden = true; $('bar').style.width = cls === 'good' ? '100%' : $('bar').style.width; setStatus(msg, cls); }
+  function setStatus(t, cls) { const s = $('status'); s.textContent = t; s.className = 'status' + (cls ? ' ' + cls : ''); }
+
+  // ---------- events ----------
+  const drop = $('drop'), file = $('file');
+  drop.addEventListener('click', () => file.click());
+  drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); file.click(); } });
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) readFile(f); });
+  file.addEventListener('change', () => { if (file.files[0]) readFile(file.files[0]); file.value = ''; });
+  async function readFile(f) {
+    try {
+      setStatus('Đang đọc ' + f.name + '…');
+      let wb;
+      if (/\.(csv|txt)$/i.test(f.name)) {
+        const buf = new Uint8Array(await f.arrayBuffer());
+        let text;
+        if (buf[0] === 0xFF && buf[1] === 0xFE) text = new TextDecoder('utf-16le').decode(buf);
+        else if (buf[0] === 0xFE && buf[1] === 0xFF) text = new TextDecoder('utf-16be').decode(buf);
+        else text = new TextDecoder('utf-8').decode(buf);
+        text = text.replace(/^\ufeff/, '');
+        const fs = text.split(/\r?\n/, 1)[0].includes('\t') ? '\t' : (text.split(/\r?\n/, 1)[0].split(';').length > text.split(/\r?\n/, 1)[0].split(',').length ? ';' : ',');
+        wb = XLSX.read(text, { type: 'string', FS: fs, raw: true });
+      } else {
+        wb = XLSX.read(new Uint8Array(await f.arrayBuffer()), { type: 'array' });
+      }
+      S.zipTouched = false; S.sel = 0;
+      loadWorkbook(wb, f.name, false);
+      setStatus('Đã nạp ' + fmt(S.rows.length) + ' dòng từ ' + f.name + '.', 'good');
+    } catch (e) { setStatus('Không đọc được file này. Kiểm tra lại định dạng .xlsx/.csv.', 'err'); }
+  }
+  $('sheet').addEventListener('change', e => { S.zipTouched = false; S.sel = 0; useSheet(e.target.value, true); });
+  $('hasHeader').addEventListener('change', () => useSheet($('sheet').value || S.sheetNames[0], false));
+  ['colName', 'colData'].forEach(id => $(id).addEventListener('change', () => { S.zipTouched = false; rebuild(); }));
+  ['qrSize', 'pad', 'ec', 'fg', 'bgc', 'dpi'].forEach(id => $(id).addEventListener('input', renderPreview));
+  $('zipName').addEventListener('input', () => { S.zipTouched = true; renderTree(); });
+  $('go').addEventListener('click', generate);
+  $('cancel').addEventListener('click', () => { S.cancel = true; });
+
+  // ---------- boot with sample ----------
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(SAMPLE), 'Danh sách');
+  loadWorkbook(wb, 'du-lieu-mau.xlsx', true);
+  setStatus('Đang hiển thị dữ liệu mẫu. Nạp file của bạn ở bước 1. Cần kết nối mạng để tải thư viện khi mở trang.');
+  if (typeof jsQR !== 'function') {
+    const v = $('verify'); v.checked = false; v.disabled = true;
+    v.parentElement.insertAdjacentHTML('beforeend', ' <span class="tag">Không tải được bộ quét, tạm tắt</span>');
+  }
+})();
+</script>
+
+</body>
+</html>
